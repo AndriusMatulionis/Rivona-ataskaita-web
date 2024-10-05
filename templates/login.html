@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prisijungti</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Prisijungti</h1>
+        <form action="{{ url_for('login') }}" method="POST">
+            <div class="form-group">
+                <label for="username">Vartotojo vardas:</label>
+                <input type="text" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Slaptažodis:</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Prisijungti</button>
+        </form>
+        <a href="{{ url_for('register') }}">Neturite paskyros? Registruotis čia</a>
+    </div>
+</body>
+</html>
