@@ -1,124 +1,19 @@
-/* Pridedame kūno foną su gradientu */
-body {
-    background: linear-gradient(135deg, #f78ca0, #f9748f, #fd868c, #fe9a8b);
-    font-family: 'Arial', sans-serif;
-    color: white;
-    margin: 0;
-    padding: 0;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    background-size: 400% 400%;
-    animation: gradientAnimation 10s ease infinite;
-}
-
-/* Fono gradiento animacija */
-@keyframes gradientAnimation {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-/* Bendri įvesties laukų stiliai */
-input[type="text"],
-input[type="number"],
-input[type="date"],
-input[type="month"] {
-    font-size: 24px;
-    text-align: center;
-    padding: 10px;
-    width: 100%;
-    border-radius: 8px;
-    border: 2px solid #333;
-    transition: all 0.3s ease;
-    background-color: rgba(0, 0, 0, 0.6); /* Pusiau permatomas fonas */
-    color: #fff;
-}
-
-/* Kai įvesties laukas aktyvus */
-input[type="text"]:focus,
-input[type="number"]:focus,
-input[type="date"]:focus,
-input[type="month"]:focus {
-    background-color: rgba(255, 255, 255, 0.2); /* Permatomas fokusavimo efektas */
-    border-color: #ff7f50;
-    outline: none;
-    color: white;
-}
-
-/* Pridėti spalvotą foną kai laukas aktyvus */
-input[type="text"].active,
-input[type="number"].active,
-input[type="date"].active,
-input[type="month"].active {
-    background-color: rgba(255, 255, 255, 0.3);
-    color: #fff;
-    border: 2px solid #ff7f50;
-}
-
-/* Etiketės stiliai */
-label {
-    font-size: 18px;
-    color: #f0e68c; /* Ryškesnė spalva, primenanti Vice City stilių */
-    display: block;
-    margin-bottom: 5px;
-}
-
-/* Užtikriname, kad placeholder tekstas yra tinkamos spalvos */
-input::placeholder {
-    color: rgba(255, 255, 255, 0.6); /* Pusiau permatomas tekstas placeholder'io */
-}
-
-/* Mygtuko stilius */
-button {
-    background-color: #ff7f50; /* Koralo spalva */
-    border: none;
-    padding: 12px 24px;
-    border-radius: 50px;
-    font-size: 20px;
-    color: white;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-}
-
-button:hover {
-    background-color: #ff4500; /* Tamsesnė koralo spalva */
-}
-
-/* Lentelių adaptavimas mažesniems ekranams */
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-}
-
-/* Lentelių stiliai */
-table {
+/* Čia galite pridėti papildomus stilius, jei reikia */
+.custom-table {
     width: 100%;
     border-collapse: collapse;
 }
 
-th, td {
-    padding: 10px;
-    text-align: center;
-    border: 1px solid #ddd;
+.custom-table th, .custom-table td {
+    border: 1px solid #e2e8f0;
+    padding: 0.75rem;
 }
 
-/* Užtikriname, kad mažesniuose ekranuose stulpeliai tilptų į ekraną */
-@media (max-width: 768px) {
-    th, td {
-        font-size: 14px;
-        padding: 8px;
-    }
-
-    table {
-        font-size: 14px;
-    }
+.custom-table th {
+    background-color: #f8fafc;
+    font-weight: bold;
 }
 
-/* Tamsesnis fonas viršutiniams lentelės langeliams */
-th {
-    background-color: #333;
-    color: white;
+.custom-table tr:nth-child(even) {
+    background-color: #f1f5f9;
 }
