@@ -1,7 +1,33 @@
-/* Čia galite pridėti papildomus stilius, jei reikia */
+body {
+    min-height: 100vh;
+    background: linear-gradient(
+        135deg,
+        #FFE5E5 0%,    /* Švelni rožinė */
+        #E5F2FF 25%,   /* Švelni mėlyna */
+        #E5FFF2 50%,   /* Švelni žalia */
+        #FFF5E5 75%,   /* Švelni geltona */
+        #F2E5FF 100%   /* Švelni violetinė */
+    );
+    background-attachment: fixed; /* Užtikrina, kad gradientas išliktų fiksuotas slenkant puslapį */
+}
+
+.container {
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+/* Likę stiliai lieka tokie patys kaip ankstesniame pavyzdyje */
 .custom-table {
     width: 100%;
     border-collapse: collapse;
+    background-color: white;
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
 }
 
 .custom-table th, .custom-table td {
@@ -16,4 +42,38 @@
 
 .custom-table tr:nth-child(even) {
     background-color: #f1f5f9;
+}
+
+.form-control, .btn {
+    border-radius: 5px;
+}
+
+h1, h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    border-color: #3498db;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    border-color: #2980b9;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    border-color: #e74c3c;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+    border-color: #c0392b;
+}
+
+.form-group label {
+    font-weight: bold;
+    color: #34495e;
 }

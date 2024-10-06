@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reisų Rezultatai</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
@@ -20,6 +21,7 @@
 
             const handleMonthChange = (event) => {
                 setSelectedMonth(event.target.value);
+                // Čia galite pridėti logiką, kuri atnaujintų duomenis pagal pasirinktą mėnesį
             };
 
             return (
@@ -45,35 +47,41 @@
                         <button type="submit" className="btn btn-primary">Filtruoti</button>
                     </form>
 
+                    <h2>Pridėti naują įrašą</h2>
                     <form action="/" method="POST" className="mb-4">
-                        <h2>Pridėti naują įrašą</h2>
-                        <div className="form-group">
-                            <label htmlFor="data">Data:</label>
-                            <input type="date" id="data" name="data" className="form-control" required />
+                        <div className="form-row">
+                            <div className="form-group col-md-6">
+                                <label htmlFor="data">Data:</label>
+                                <input type="date" id="data" name="data" className="form-control" required />
+                            </div>
+                            <div className="form-group col-md-6">
+                                <label htmlFor="auto_nr">Automobilio numeris:</label>
+                                <input type="text" id="auto_nr" name="auto_nr" className="form-control" required />
+                            </div>
                         </div>
-                        <div className="form-group">
-                            <label htmlFor="auto_nr">Automobilio numeris:</label>
-                            <input type="text" id="auto_nr" name="auto_nr" className="form-control" required />
+                        <div className="form-row">
+                            <div className="form-group col-md-4">
+                                <label htmlFor="tasku_kiekis">Taškų kiekis:</label>
+                                <input type="number" step="0.01" id="tasku_kiekis" name="tasku_kiekis" className="form-control" required />
+                            </div>
+                            <div className="form-group col-md-4">
+                                <label htmlFor="km_kiekis">Kilometrų kiekis:</label>
+                                <input type="number" step="0.01" id="km_kiekis" name="km_kiekis" className="form-control" required />
+                            </div>
+                            <div className="form-group col-md-4">
+                                <label htmlFor="pakrautos_paletes">Pakrautos paletės:</label>
+                                <input type="number" step="0.01" id="pakrautos_paletes" name="pakrautos_paletes" className="form-control" required />
+                            </div>
                         </div>
-                        <div className="form-group">
-                            <label htmlFor="tasku_kiekis">Taškų kiekis:</label>
-                            <input type="number" step="0.01" id="tasku_kiekis" name="tasku_kiekis" className="form-control" required />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="km_kiekis">Kilometrų kiekis:</label>
-                            <input type="number" step="0.01" id="km_kiekis" name="km_kiekis" className="form-control" required />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="pakrautos_paletes">Pakrautos paletės:</label>
-                            <input type="number" step="0.01" id="pakrautos_paletes" name="pakrautos_paletes" className="form-control" required />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="tara">Tara:</label>
-                            <input type="number" step="0.01" id="tara" name="tara" className="form-control" required />
-                        </div>
-                        <div className="form-group">
-                            <label htmlFor="atgalines_paletes">Atgalinės paletės:</label>
-                            <input type="number" step="0.01" id="atgalines_paletes" name="atgalines_paletes" className="form-control" required />
+                        <div className="form-row">
+                            <div className="form-group col-md-6">
+                                <label htmlFor="tara">Tara:</label>
+                                <input type="number" step="0.01" id="tara" name="tara" className="form-control" required />
+                            </div>
+                            <div className="form-group col-md-6">
+                                <label htmlFor="atgalines_paletes">Atgalinės paletės:</label>
+                                <input type="number" step="0.01" id="atgalines_paletes" name="atgalines_paletes" className="form-control" required />
+                            </div>
                         </div>
                         <button type="submit" className="btn btn-success">Pridėti įrašą</button>
                     </form>
