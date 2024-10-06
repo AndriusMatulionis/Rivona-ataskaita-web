@@ -1,79 +1,109 @@
+@keyframes gradient {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
 body {
     min-height: 100vh;
     background: linear-gradient(
-        135deg,
-        #FFE5E5 0%,    /* Švelni rožinė */
-        #E5F2FF 25%,   /* Švelni mėlyna */
-        #E5FFF2 50%,   /* Švelni žalia */
-        #FFF5E5 75%,   /* Švelni geltona */
-        #F2E5FF 100%   /* Švelni violetinė */
+        -45deg,
+        #FF9A8B,
+        #FF6B6B,
+        #4ECDC4,
+        #45B7D1,
+        #6A5ACD
     );
-    background-attachment: fixed; /* Užtikrina, kad gradientas išliktų fiksuotas slenkant puslapį */
+    background-size: 400% 400%;
+    animation: gradient 15s ease infinite;
+    background-attachment: fixed;
 }
 
 .container {
-    background-color: rgba(255, 255, 255, 0.8);
-    border-radius: 10px;
-    padding: 20px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-    margin-top: 20px;
-    margin-bottom: 20px;
+    background-color: rgba(255, 255, 255, 0.85);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+    margin-top: 30px;
+    margin-bottom: 30px;
 }
 
-/* Likę stiliai lieka tokie patys kaip ankstesniame pavyzdyje */
+/* Likusios stiliaus taisyklės lieka tokios pačios kaip ankstesniame pavyzdyje */
 .custom-table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     background-color: white;
-    border-radius: 5px;
+    border-radius: 10px;
     overflow: hidden;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
 }
 
 .custom-table th, .custom-table td {
-    border: 1px solid #e2e8f0;
-    padding: 0.75rem;
+    border: none;
+    padding: 12px;
+    text-align: left;
 }
 
 .custom-table th {
-    background-color: #f8fafc;
+    background-color: #4ECDC4;
+    color: white;
     font-weight: bold;
+    text-transform: uppercase;
 }
 
 .custom-table tr:nth-child(even) {
-    background-color: #f1f5f9;
+    background-color: #f8f9fa;
+}
+
+.custom-table tr:hover {
+    background-color: #e9ecef;
+    transition: background-color 0.3s ease;
 }
 
 .form-control, .btn {
-    border-radius: 5px;
+    border-radius: 8px;
 }
 
 h1, h2 {
     color: #2c3e50;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
+    font-weight: bold;
 }
 
 .btn-primary {
-    background-color: #3498db;
-    border-color: #3498db;
+    background-color: #4ECDC4;
+    border-color: #4ECDC4;
 }
 
 .btn-primary:hover {
-    background-color: #2980b9;
-    border-color: #2980b9;
+    background-color: #45B7D1;
+    border-color: #45B7D1;
 }
 
 .btn-danger {
-    background-color: #e74c3c;
-    border-color: #e74c3c;
+    background-color: #FF6B6B;
+    border-color: #FF6B6B;
 }
 
 .btn-danger:hover {
-    background-color: #c0392b;
-    border-color: #c0392b;
+    background-color: #ee5253;
+    border-color: #ee5253;
 }
 
 .form-group label {
     font-weight: bold;
-    color: #34495e;
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.form-control:focus {
+    border-color: #4ECDC4;
+    box-shadow: 0 0 0 0.2rem rgba(78, 205, 196, 0.25);
 }
