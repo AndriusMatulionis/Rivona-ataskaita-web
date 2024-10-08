@@ -26,6 +26,7 @@
     <script type="text/babel">
         function EditForm() {
             const [isSavaitgalis, setIsSavaitgalis] = React.useState({{ irasas.savaitgalis|tojson }});
+            const carNumbers = JSON.parse('{{ car_numbers | safe }}');
 
             const handleSavaitgalisToggle = () => {
                 setIsSavaitgalis(!isSavaitgalis);
@@ -42,7 +43,13 @@
                             </div>
                             <div className="form-group col-md-6">
                                 <label htmlFor="auto_nr">Automobilio numeris:</label>
-                                <input type="text" id="auto_nr" name="auto_nr" className="form-control" value="{{ irasas.auto_nr }}" required />
+                                <select id="auto_nr" name="auto_nr" className="form-control" required>
+                                    {carNumbers.map(number => (
+                                        <option key={number} value={number} {{ 'selected' if irasas.auto_nr == number else '' }}>
+                                            {number}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                         <div className="form-row">

@@ -29,6 +29,7 @@
             const [bendraSuma, setBendraSuma] = React.useState(JSON.parse('{{ bendra_suma | safe }}'));
             const [selectedMonth, setSelectedMonth] = React.useState('{{ selected_month }}');
             const [isSavaitgalis, setIsSavaitgalis] = React.useState(false);
+            const carNumbers = JSON.parse('{{ car_numbers | safe }}');
 
             const handleMonthChange = (event) => {
                 setSelectedMonth(event.target.value);
@@ -70,7 +71,11 @@
                             </div>
                             <div className="form-group col-md-6">
                                 <label htmlFor="auto_nr">Automobilio numeris:</label>
-                                <input type="text" id="auto_nr" name="auto_nr" className="form-control" required />
+                                <select id="auto_nr" name="auto_nr" className="form-control" required>
+                                    {carNumbers.map(number => (
+                                        <option key={number} value={number}>{number}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                         <div className="form-row">

@@ -27,6 +27,14 @@ mail = Mail(app)
 migrate = Migrate(app, db)
 s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
+# Unique and sorted list of car numbers
+CAR_NUMBERS = sorted(list(set([
+    "FFH433", "FGB047", "GJM253", "GJM332", "GUN418", 
+    "JEH745", "JEH746", "KTT023", "KTT029", "KUL631", 
+    "KUL633", "KUL637", "KUM239", "KZL604", "LCS347", 
+    "LCS352", "LCS353", "LCS360"
+])))
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -78,7 +86,6 @@ def index():
             atgalines_paletes = float(request.form['atgalines_paletes'])
             savaitgalis = request.form.get('savaitgalis') == 'true'
 
-            # Bazinis skaičiavimas
             eur_uz_reisa = (
                 km_kiekis * 0.1 +
                 tasku_kiekis * 1.7 +
@@ -87,7 +94,6 @@ def index():
                 atgalines_paletes * 0.64
             )
 
-            # Jei savaitgalis, pridedame 20% prie visų, išskyrus tara
             if savaitgalis:
                 eur_uz_reisa_be_taros = eur_uz_reisa - (tara * 0.5)
                 eur_uz_reisa = eur_uz_reisa_be_taros * 1.2 + (tara * 0.5)
@@ -133,7 +139,8 @@ def index():
     return render_template('index.html', 
                            visi_irasai=visi_irasai_json, 
                            bendra_suma=json.dumps(bendra_suma), 
-                           selected_month=selected_month)
+                           selected_month=selected_month,
+                           car_numbers=json.dumps(CAR_NUMBERS))
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -241,7 +248,6 @@ def edit(id):
             irasas.tara = float(request.form['tara'])
             irasas.savaitgalis = request.form.get('savaitgalis') == 'true'
 
-            # Perskaičiuojame eur_uz_reisa
             eur_uz_reisa = (
                 irasas.km_kiekis * 0.1 +
                 irasas.tasku_kiekis * 1.7 +
@@ -262,7 +268,7 @@ def edit(id):
         except Exception as e:
             db.session.rollback()
             flash(f'Klaida atnaujinant įrašą: {str(e)}', 'danger')
-    return render_template('edit.html', irasas=irasas)
+    return render_template('edit.html', irasas=irasas, car_numbers=json.dumps(CAR_NUMBERS))
 
 @app.route('/delete/<int:id>')
 @login_required
