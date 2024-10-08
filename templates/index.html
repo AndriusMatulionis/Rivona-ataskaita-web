@@ -9,6 +9,16 @@
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+    <style>
+        .weekend-button {
+            background-color: transparent;
+            border: 1px solid #ccc;
+            transition: background-color 0.3s;
+        }
+        .weekend-button.active {
+            background-color: orange;
+        }
+    </style>
 </head>
 <body>
     <div id="root"></div>
@@ -18,10 +28,14 @@
             const [visiIrasai, setVisiIrasai] = React.useState(JSON.parse('{{ visi_irasai | safe }}'));
             const [bendraSuma, setBendraSuma] = React.useState(JSON.parse('{{ bendra_suma | safe }}'));
             const [selectedMonth, setSelectedMonth] = React.useState('{{ selected_month }}');
+            const [isSavaitgalis, setIsSavaitgalis] = React.useState(false);
 
             const handleMonthChange = (event) => {
                 setSelectedMonth(event.target.value);
-                // Čia galite pridėti logiką, kuri atnaujintų duomenis pagal pasirinktą mėnesį
+            };
+
+            const handleSavaitgalisToggle = () => {
+                setIsSavaitgalis(!isSavaitgalis);
             };
 
             return (
@@ -74,13 +88,25 @@
                             </div>
                         </div>
                         <div className="form-row">
-                            <div className="form-group col-md-6">
+                            <div className="form-group col-md-4">
                                 <label htmlFor="atgalines_paletes">Atgalinės paletės:</label>
                                 <input type="number" step="0.01" id="atgalines_paletes" name="atgalines_paletes" className="form-control" required />
                             </div>
-                            <div className="form-group col-md-6">
+                            <div className="form-group col-md-4">
                                 <label htmlFor="tara">Tara:</label>
                                 <input type="number" step="0.01" id="tara" name="tara" className="form-control" required />
+                            </div>
+                            <div className="form-group col-md-4">
+                                <label>Savaitgalis:</label>
+                                <button 
+                                    type="button"
+                                    className={`btn btn-block weekend-button ${isSavaitgalis ? 'active' : ''}`}
+                                    onClick={handleSavaitgalisToggle}
+                                    title="Savaitgalį mokami papildomi 20% nuo atliktų darbų"
+                                >
+                                    Savaitgalis
+                                </button>
+                                <input type="hidden" name="savaitgalis" value={isSavaitgalis ? 'true' : 'false'} />
                             </div>
                         </div>
                         <button type="submit" className="btn btn-success">Pridėti įrašą</button>
@@ -98,6 +124,7 @@
                                 <th>Tara</th>
                                 <th>Atg. paletės</th>
                                 <th>EUR</th>
+                                <th>Savaitgalis</th>
                                 <th>Veiksmai</th>
                             </tr>
                         </thead>
@@ -112,6 +139,7 @@
                                     <td>{irasas.tara.toFixed(2)}</td>
                                     <td>{irasas.atgalines_paletes.toFixed(2)}</td>
                                     <td>{irasas.eur_uz_reisa.toFixed(2)}</td>
+                                    <td>{irasas.savaitgalis ? 'Taip' : 'Ne'}</td>
                                     <td>
                                         <a href={`/edit/${irasas.id}`} className="btn btn-sm btn-warning mr-2">Redaguoti</a>
                                         <a href={`/delete/${irasas.id}`} className="btn btn-sm btn-danger" onClick={(e) => { if(!confirm('Ar tikrai norite ištrinti šį įrašą?')) e.preventDefault(); }}>Ištrinti</a>

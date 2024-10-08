@@ -8,6 +8,7 @@ from flask_mail import Mail, Message
 from dotenv import load_dotenv
 import json
 from itsdangerous import URLSafeTimedSerializer
+from flask_migrate import Migrate
 
 load_dotenv()
 
@@ -23,6 +24,7 @@ app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 
 db = SQLAlchemy(app)
 mail = Mail(app)
+migrate = Migrate(app, db)
 s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
 class User(db.Model):
@@ -48,6 +50,7 @@ class RideResult(db.Model):
     atgalines_paletes = db.Column(db.Float, nullable=False)
     eur_uz_reisa = db.Column(db.Float, nullable=False)
     menesis = db.Column(db.String(7), nullable=False)
+    savaitgalis = db.Column(db.Boolean, default=False)
 
 def login_required(f):
     @wraps(f)
@@ -73,7 +76,9 @@ def index():
             pakrautos_paletes = float(request.form['pakrautos_paletes'])
             tara = float(request.form['tara'])
             atgalines_paletes = float(request.form['atgalines_paletes'])
+            savaitgalis = request.form.get('savaitgalis') == 'true'
 
+            # Bazinis skaičiavimas
             eur_uz_reisa = (
                 km_kiekis * 0.1 +
                 tasku_kiekis * 1.7 +
@@ -82,12 +87,17 @@ def index():
                 atgalines_paletes * 0.64
             )
 
+            # Jei savaitgalis, pridedame 20% prie visų, išskyrus tara
+            if savaitgalis:
+                eur_uz_reisa_be_taros = eur_uz_reisa - (tara * 0.5)
+                eur_uz_reisa = eur_uz_reisa_be_taros * 1.2 + (tara * 0.5)
+
             menesis = data.strftime('%Y-%m')
             naujas_irasas = RideResult(
                 data=data, auto_nr=auto_nr, tasku_kiekis=tasku_kiekis,
                 km_kiekis=km_kiekis, pakrautos_paletes=pakrautos_paletes,
                 tara=tara, atgalines_paletes=atgalines_paletes,
-                eur_uz_reisa=eur_uz_reisa, menesis=menesis
+                eur_uz_reisa=eur_uz_reisa, menesis=menesis, savaitgalis=savaitgalis
             )
 
             db.session.add(naujas_irasas)
@@ -116,7 +126,8 @@ def index():
         'pakrautos_paletes': irasas.pakrautos_paletes,
         'tara': irasas.tara,
         'atgalines_paletes': irasas.atgalines_paletes,
-        'eur_uz_reisa': irasas.eur_uz_reisa
+        'eur_uz_reisa': irasas.eur_uz_reisa,
+        'savaitgalis': irasas.savaitgalis
     } for irasas in visi_irasai])
 
     return render_template('index.html', 
@@ -223,13 +234,15 @@ def edit(id):
         try:
             irasas.data = datetime.strptime(request.form['data'], '%Y-%m-%d').date()
             irasas.auto_nr = request.form['auto_nr']
-            irasas.tasku_kiekis = float(request.form['tasku_kiekis'])
             irasas.km_kiekis = float(request.form['km_kiekis'])
+            irasas.tasku_kiekis = float(request.form['tasku_kiekis'])
             irasas.pakrautos_paletes = float(request.form['pakrautos_paletes'])
-            irasas.tara = float(request.form['tara'])
             irasas.atgalines_paletes = float(request.form['atgalines_paletes'])
+            irasas.tara = float(request.form['tara'])
+            irasas.savaitgalis = request.form.get('savaitgalis') == 'true'
 
-            irasas.eur_uz_reisa = (
+            # Perskaičiuojame eur_uz_reisa
+            eur_uz_reisa = (
                 irasas.km_kiekis * 0.1 +
                 irasas.tasku_kiekis * 1.7 +
                 irasas.pakrautos_paletes * 0.64 +
@@ -237,7 +250,12 @@ def edit(id):
                 irasas.atgalines_paletes * 0.64
             )
 
-            irasas.menesis = irasas.data.strftime('%Y-%m')
+            if irasas.savaitgalis:
+                eur_uz_reisa_be_taros = eur_uz_reisa - (irasas.tara * 0.5)
+                irasas.eur_uz_reisa = eur_uz_reisa_be_taros * 1.2 + (irasas.tara * 0.5)
+            else:
+                irasas.eur_uz_reisa = eur_uz_reisa
+
             db.session.commit()
             flash('Įrašas sėkmingai atnaujintas!', 'success')
             return redirect(url_for('index'))

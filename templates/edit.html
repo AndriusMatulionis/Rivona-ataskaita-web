@@ -5,36 +5,90 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Redaguoti įrašą</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
     <style>
-        /* ... (tas pats CSS kaip index.html) ... */
+        .weekend-button {
+            background-color: transparent;
+            border: 1px solid #ccc;
+            transition: background-color 0.3s;
+        }
+        .weekend-button.active {
+            background-color: orange;
+        }
     </style>
 </head>
 <body>
-    <h1>Redaguoti įrašą</h1>
-    <form method="POST">
-        <label for="data">Data:</label>
-        <input type="date" id="data" name="data" value="{{ irasas.data }}" required>
+    <div id="root"></div>
 
-        <label for="auto_nr">Auto Nr.:</label>
-        <input type="text" id="auto_nr" name="auto_nr" value="{{ irasas.auto_nr }}" required>
+    <script type="text/babel">
+        function EditForm() {
+            const [isSavaitgalis, setIsSavaitgalis] = React.useState({{ irasas.savaitgalis|tojson }});
 
-        <label for="tasku_kiekis">Taškų kiekis:</label>
-        <input type="number" id="tasku_kiekis" name="tasku_kiekis" step="0.01" value="{{ irasas.tasku_kiekis }}" required>
+            const handleSavaitgalisToggle = () => {
+                setIsSavaitgalis(!isSavaitgalis);
+            };
 
-        <label for="km_kiekis">Km kiekis:</label>
-        <input type="number" id="km_kiekis" name="km_kiekis" step="0.01" value="{{ irasas.km_kiekis }}" required>
+            return (
+                <div className="container mt-5">
+                    <h1 className="mb-4">Redaguoti įrašą</h1>
+                    <form action="{{ url_for('edit', id=irasas.id) }}" method="POST" className="mb-4">
+                        <div className="form-row">
+                            <div className="form-group col-md-6">
+                                <label htmlFor="data">Data:</label>
+                                <input type="date" id="data" name="data" className="form-control" value="{{ irasas.data }}" required />
+                            </div>
+                            <div className="form-group col-md-6">
+                                <label htmlFor="auto_nr">Automobilio numeris:</label>
+                                <input type="text" id="auto_nr" name="auto_nr" className="form-control" value="{{ irasas.auto_nr }}" required />
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group col-md-4">
+                                <label htmlFor="km_kiekis">Kilometrų kiekis:</label>
+                                <input type="number" step="0.01" id="km_kiekis" name="km_kiekis" className="form-control" value="{{ irasas.km_kiekis }}" required />
+                            </div>
+                            <div className="form-group col-md-4">
+                                <label htmlFor="tasku_kiekis">Taškų kiekis:</label>
+                                <input type="number" step="0.01" id="tasku_kiekis" name="tasku_kiekis" className="form-control" value="{{ irasas.tasku_kiekis }}" required />
+                            </div>
+                            <div className="form-group col-md-4">
+                                <label htmlFor="pakrautos_paletes">Pakrautos paletės:</label>
+                                <input type="number" step="0.01" id="pakrautos_paletes" name="pakrautos_paletes" className="form-control" value="{{ irasas.pakrautos_paletes }}" required />
+                            </div>
+                        </div>
+                        <div className="form-row">
+                            <div className="form-group col-md-4">
+                                <label htmlFor="atgalines_paletes">Atgalinės paletės:</label>
+                                <input type="number" step="0.01" id="atgalines_paletes" name="atgalines_paletes" className="form-control" value="{{ irasas.atgalines_paletes }}" required />
+                            </div>
+                            <div className="form-group col-md-4">
+                                <label htmlFor="tara">Tara:</label>
+                                <input type="number" step="0.01" id="tara" name="tara" className="form-control" value="{{ irasas.tara }}" required />
+                            </div>
+                            <div className="form-group col-md-4">
+                                <label>Savaitgalis:</label>
+                                <button 
+                                    type="button"
+                                    className={`btn btn-block weekend-button ${isSavaitgalis ? 'active' : ''}`}
+                                    onClick={handleSavaitgalisToggle}
+                                    title="Savaitgalį mokami papildomi 20% nuo atliktų darbų"
+                                >
+                                    Savaitgalis
+                                </button>
+                                <input type="hidden" name="savaitgalis" value={isSavaitgalis ? 'true' : 'false'} />
+                            </div>
+                        </div>
+                        <button type="submit" className="btn btn-primary">Atnaujinti įrašą</button>
+                    </form>
+                    <a href="{{ url_for('index') }}" className="btn btn-secondary">Grįžti</a>
+                </div>
+            );
+        }
 
-        <label for="pakrautos_paletes">Pakrautos paletės:</label>
-        <input type="number" id="pakrautos_paletes" name="pakrautos_paletes" step="0.01" value="{{ irasas.pakrautos_paletes }}" required>
-
-        <label for="tara">Tara:</label>
-        <input type="number" id="tara" name="tara" step="0.01" value="{{ irasas.tara }}" required>
-
-        <label for="atgalines_paletes">Atgalinės paletės:</label>
-        <input type="number" id="atgalines_paletes" name="atgalines_paletes" step="0.01" value="{{ irasas.atgalines_paletes }}" required>
-
-        <input type="submit" value="Atnaujinti įrašą">
-    </form>
-    <a href="{{ url_for('index') }}">Grįžti į pagrindinį puslapį</a>
+        ReactDOM.render(<EditForm />, document.getElementById('root'));
+    </script>
 </body>
 </html>
