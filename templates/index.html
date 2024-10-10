@@ -44,7 +44,8 @@
                     <h1 className="mb-4">Reisų Rezultatai</h1>
                     
                     <div className="mb-3">
-                        <a href="/logout" className="btn btn-danger">Atsijungti</a>
+                        <a href="/logout" className="btn btn-danger mr-2">Atsijungti</a>
+                        <a href="/grafikai" className="btn btn-info">Peržiūrėti grafikus</a>
                     </div>
 
                     <form action="/" method="GET" className="mb-4">
@@ -61,6 +62,30 @@
                         </div>
                         <button type="submit" className="btn btn-primary">Filtruoti</button>
                     </form>
+
+                    <h2>Bendra suma</h2>
+                    <table className="table table-bordered mb-5">
+                        <tbody>
+                            <tr>
+                                <th>Įrašų skaičius</th>
+                                <th>Taškų kiekis</th>
+                                <th>Kilometrų kiekis</th>
+                                <th>Pakrautos paletės</th>
+                                <th>Tara</th>
+                                <th>Atgalinės paletės</th>
+                                <th>EUR už reisą</th>
+                            </tr>
+                            <tr>
+                                <td>{visiIrasai.length}</td>
+                                <td>{bendraSuma.tasku_kiekis.toFixed(2)}</td>
+                                <td>{bendraSuma.km_kiekis.toFixed(2)}</td>
+                                <td>{bendraSuma.pakrautos_paletes.toFixed(2)}</td>
+                                <td>{bendraSuma.tara.toFixed(2)}</td>
+                                <td>{bendraSuma.atgalines_paletes.toFixed(2)}</td>
+                                <td>{bendraSuma.eur_uz_reisa.toFixed(2)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
 
                     <h2>Pridėti naują įrašą</h2>
                     <form action="/" method="POST" className="mb-4">
@@ -121,6 +146,7 @@
                     <table className="table table-striped">
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>Data</th>
                                 <th>Auto Nr.</th>
                                 <th>Taškai</th>
@@ -134,8 +160,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {visiIrasai.map(irasas => (
+                            {visiIrasai.map((irasas, index) => (
                                 <tr key={irasas.id}>
+                                    <td>{index + 1}</td>
                                     <td>{irasas.data}</td>
                                     <td>{irasas.auto_nr}</td>
                                     <td>{irasas.tasku_kiekis.toFixed(2)}</td>
@@ -151,28 +178,6 @@
                                     </td>
                                 </tr>
                             ))}
-                        </tbody>
-                    </table>
-
-                    <h2>Bendra suma</h2>
-                    <table className="table table-bordered">
-                        <tbody>
-                            <tr>
-                                <th>Taškų kiekis</th>
-                                <th>Kilometrų kiekis</th>
-                                <th>Pakrautos paletės</th>
-                                <th>Tara</th>
-                                <th>Atgalinės paletės</th>
-                                <th>EUR už reisą</th>
-                            </tr>
-                            <tr>
-                                <td>{bendraSuma.tasku_kiekis.toFixed(2)}</td>
-                                <td>{bendraSuma.km_kiekis.toFixed(2)}</td>
-                                <td>{bendraSuma.pakrautos_paletes.toFixed(2)}</td>
-                                <td>{bendraSuma.tara.toFixed(2)}</td>
-                                <td>{bendraSuma.atgalines_paletes.toFixed(2)}</td>
-                                <td>{bendraSuma.eur_uz_reisa.toFixed(2)}</td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>

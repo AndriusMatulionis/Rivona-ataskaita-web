@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reisų Rezultatų Grafikai</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://unpkg.com/react@17/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/prop-types@15.7.2/prop-types.min.js" crossorigin></script>
+    <script src="https://unpkg.com/recharts@2.1.9/umd/Recharts.js" crossorigin></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+        const ChartComponent = ({ data, dataKey, title, color }) => (
+            <div>
+                <h3>{title}</h3>
+                <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={data}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="menesis" />
+                        <YAxis />
+                        <Tooltip formatter={(value) => dataKey === 'eur_uz_reisa' ? `${value.toFixed(2)} €` : value.toFixed(2)} />
+                        <Legend />
+                        <Bar dataKey={dataKey} fill={color} name={title} />
+                    </BarChart>
+                </ResponsiveContainer>
+            </div>
+        );
+
+        function Charts({ visiIrasai }) {
+            console.log('Visi įrašai:', visiIrasai);
+
+            const monthlyData = visiIrasai.reduce((acc, irasas) => {
+                const month = irasas.menesis;
+                if (!acc[month]) {
+                    acc[month] = { 
+                        menesis: month, 
+                        km_kiekis: 0, 
+                        tasku_kiekis: 0, 
+                        pakrautos_paletes: 0, 
+                        tara: 0, 
+                        atgalines_paletes: 0, 
+                        eur_uz_reisa: 0 
+                    };
+                }
+                acc[month].km_kiekis += irasas.km_kiekis;
+                acc[month].tasku_kiekis += irasas.tasku_kiekis;
+                acc[month].pakrautos_paletes += irasas.pakrautos_paletes;
+                acc[month].tara += irasas.tara;
+                acc[month].atgalines_paletes += irasas.atgalines_paletes;
+                acc[month].eur_uz_reisa += irasas.eur_uz_reisa;
+                return acc;
+            }, {});
+
+            const chartData = Object.values(monthlyData).sort((a, b) => a.menesis.localeCompare(b.menesis));
+            console.log('Chart data:', chartData);
+
+            return (
+                <div>
+                    <ChartComponent data={chartData} dataKey="km_kiekis" title="Kilometrų kiekis" color="#8884d8" />
+                    <ChartComponent data={chartData} dataKey="tasku_kiekis" title="Taškų kiekis" color="#82ca9d" />
+                    <ChartComponent data={chartData} dataKey="pakrautos_paletes" title="Pakrautos paletės" color="#ffc658" />
+                    <ChartComponent data={chartData} dataKey="tara" title="Tara" color="#ff8042" />
+                    <ChartComponent data={chartData} dataKey="atgalines_paletes" title="Atgalinės paletės" color="#a4de6c" />
+                    <ChartComponent data={chartData} dataKey="eur_uz_reisa" title="EUR už reisą" color="#8dd1e1" />
+                </div>
+            );
+        }
+
+        function App() {
+            const visiIrasai = JSON.parse('{{ visi_irasai | safe }}');
+            console.log('Parsed visi įrašai:', visiIrasai);
+
+            return (
+                <div className="container mt-5">
+                    <h1 className="mb-4">Reisų Rezultatų Grafikai</h1>
+                    <a href="/" className="btn btn-primary mb-3">Grįžti į pagrindinį puslapį</a>
+                    <Charts visiIrasai={visiIrasai} />
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>

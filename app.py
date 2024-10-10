@@ -142,6 +142,26 @@ def index():
                            selected_month=selected_month,
                            car_numbers=json.dumps(CAR_NUMBERS))
 
+@app.route('/grafikai')
+@login_required
+def grafikai():
+    visi_irasai = RideResult.query.all()
+    visi_irasai_json = json.dumps([{
+        'id': irasas.id,
+        'data': irasas.data.strftime('%Y-%m-%d'),
+        'auto_nr': irasas.auto_nr,
+        'tasku_kiekis': float(irasas.tasku_kiekis),
+        'km_kiekis': float(irasas.km_kiekis),
+        'pakrautos_paletes': float(irasas.pakrautos_paletes),
+        'tara': float(irasas.tara),
+        'atgalines_paletes': float(irasas.atgalines_paletes),
+        'eur_uz_reisa': float(irasas.eur_uz_reisa),
+        'savaitgalis': irasas.savaitgalis,
+        'menesis': irasas.data.strftime('%Y-%m')
+    } for irasas in visi_irasai])
+    print("Visi įrašai JSON:", visi_irasai_json)  # Pridėta debug eilutė
+    return render_template('grafikai.html', visi_irasai=visi_irasai_json)
+
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
@@ -233,6 +253,8 @@ Jei neprašėte atstatyti slaptažodžio, ignoruokite šį laišką.
 '''
     mail.send(msg)
 
+# ... (ankstesnis kodas lieka nepakeistas) ...
+
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit(id):
@@ -262,6 +284,8 @@ def edit(id):
             else:
                 irasas.eur_uz_reisa = eur_uz_reisa
 
+            irasas.menesis = irasas.data.strftime('%Y-%m')
+
             db.session.commit()
             flash('Įrašas sėkmingai atnaujintas!', 'success')
             return redirect(url_for('index'))
@@ -282,6 +306,22 @@ def delete(id):
         db.session.rollback()
         flash(f'Klaida trinant įrašą: {str(e)}', 'danger')
     return redirect(url_for('index'))
+
+
+
+@app.template_filter('date_format')
+def date_format(value, format='%Y-%m-%d'):
+    if isinstance(value, str):
+        return datetime.strptime(value, '%Y-%m-%d').strftime(format)
+    return value.strftime(format)
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('500.html'), 500
 
 if __name__ == '__main__':
     with app.app_context():
