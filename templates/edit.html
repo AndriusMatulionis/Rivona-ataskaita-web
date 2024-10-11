@@ -39,15 +39,13 @@
                         <div className="form-row">
                             <div className="form-group col-md-6">
                                 <label htmlFor="data">Data:</label>
-                                <input type="date" id="data" name="data" className="form-control" value="{{ irasas.data }}" required />
+                                <input type="date" id="data" name="data" className="form-control" defaultValue="{{ irasas.data.strftime('%Y-%m-%d') }}" required />
                             </div>
                             <div className="form-group col-md-6">
                                 <label htmlFor="auto_nr">Automobilio numeris:</label>
-                                <select id="auto_nr" name="auto_nr" className="form-control" required>
+                                <select id="auto_nr" name="auto_nr" className="form-control" defaultValue="{{ irasas.auto_nr }}" required>
                                     {carNumbers.map(number => (
-                                        <option key={number} value={number} {{ 'selected' if irasas.auto_nr == number else '' }}>
-                                            {number}
-                                        </option>
+                                        <option key={number} value={number}>{number}</option>
                                     ))}
                                 </select>
                             </div>
@@ -55,25 +53,25 @@
                         <div className="form-row">
                             <div className="form-group col-md-4">
                                 <label htmlFor="km_kiekis">Kilometrų kiekis:</label>
-                                <input type="number" step="0.01" id="km_kiekis" name="km_kiekis" className="form-control" value="{{ irasas.km_kiekis }}" required />
+                                <input type="number" step="0.01" id="km_kiekis" name="km_kiekis" className="form-control" defaultValue="{{ irasas.km_kiekis }}" required />
                             </div>
                             <div className="form-group col-md-4">
                                 <label htmlFor="tasku_kiekis">Taškų kiekis:</label>
-                                <input type="number" step="0.01" id="tasku_kiekis" name="tasku_kiekis" className="form-control" value="{{ irasas.tasku_kiekis }}" required />
+                                <input type="number" step="0.01" id="tasku_kiekis" name="tasku_kiekis" className="form-control" defaultValue="{{ irasas.tasku_kiekis }}" required />
                             </div>
                             <div className="form-group col-md-4">
                                 <label htmlFor="pakrautos_paletes">Pakrautos paletės:</label>
-                                <input type="number" step="0.01" id="pakrautos_paletes" name="pakrautos_paletes" className="form-control" value="{{ irasas.pakrautos_paletes }}" required />
+                                <input type="number" step="0.01" id="pakrautos_paletes" name="pakrautos_paletes" className="form-control" defaultValue="{{ irasas.pakrautos_paletes }}" required />
                             </div>
                         </div>
                         <div className="form-row">
                             <div className="form-group col-md-4">
                                 <label htmlFor="atgalines_paletes">Atgalinės paletės:</label>
-                                <input type="number" step="0.01" id="atgalines_paletes" name="atgalines_paletes" className="form-control" value="{{ irasas.atgalines_paletes }}" required />
+                                <input type="number" step="0.01" id="atgalines_paletes" name="atgalines_paletes" className="form-control" defaultValue="{{ irasas.atgalines_paletes }}" required />
                             </div>
                             <div className="form-group col-md-4">
                                 <label htmlFor="tara">Tara:</label>
-                                <input type="number" step="0.01" id="tara" name="tara" className="form-control" value="{{ irasas.tara }}" required />
+                                <input type="number" step="0.01" id="tara" name="tara" className="form-control" defaultValue="{{ irasas.tara }}" required />
                             </div>
                             <div className="form-group col-md-4">
                                 <label>Savaitgalis:</label>

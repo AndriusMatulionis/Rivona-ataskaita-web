@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administratoriaus skydelis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Administratoriaus skydelis</h1>
+        
+        <a href="{{ url_for('index') }}" class="btn btn-primary mb-3">Grįžti į pagrindinį puslapį</a>
+
+        <h2>Vartotojų sąrašas</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Vartotojo vardas</th>
+                    <th>El. paštas</th>
+                    <th>Administratorius</th>
+                    <th>Veiksmai</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in users %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>{% if user.is_admin %}Taip{% else %}Ne{% endif %}</td>
+                    <td>
+                        {% if not user.is_admin %}
+                        <form action="{{ url_for('delete_user', user_id=user.id) }}" method="POST" onsubmit="return confirm('Ar tikrai norite ištrinti šį vartotoją?');">
+                            <button type="submit" class="btn btn-danger btn-sm">Ištrinti</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

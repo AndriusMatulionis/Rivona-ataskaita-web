@@ -40,6 +40,7 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -66,6 +67,24 @@ def login_required(f):
         if 'user_id' not in session:
             flash('Prašome prisijungti.', 'warning')
             return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        print("Admin required decorator called")
+        if 'user_id' not in session:
+            print("No user_id in session")
+            flash('Prašome prisijungti.', 'warning')
+            return redirect(url_for('login', next=request.url))
+        user = User.query.get(session['user_id'])
+        print(f"User: {user}, Is admin: {user.is_admin if user else None}")
+        if not user or not user.is_admin:
+            print("User is not admin")
+            flash('Tik administratorius gali pasiekti šį puslapį.', 'danger')
+            return redirect(url_for('index'))
+        print("Admin access granted")
         return f(*args, **kwargs)
     return decorated_function
 
@@ -136,11 +155,38 @@ def index():
         'savaitgalis': irasas.savaitgalis
     } for irasas in visi_irasai])
 
+    user = User.query.get(session['user_id'])
+    user_info = {
+        'id': user.id,
+        'username': user.username,
+        'email': user.email,
+        'is_admin': user.is_admin
+    }
+
     return render_template('index.html', 
                            visi_irasai=visi_irasai_json, 
                            bendra_suma=json.dumps(bendra_suma), 
                            selected_month=selected_month,
-                           car_numbers=json.dumps(CAR_NUMBERS))
+                           car_numbers=json.dumps(CAR_NUMBERS),
+                           user=json.dumps(user_info))
+
+@app.route('/admin')
+@admin_required
+def admin_panel():
+    users = User.query.all()
+    return render_template('admin_panel.html', users=users)
+
+@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@admin_required
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.is_admin:
+        flash('Negalima ištrinti administratoriaus paskyros.', 'danger')
+    else:
+        db.session.delete(user)
+        db.session.commit()
+        flash(f'Vartotojas {user.username} sėkmingai ištrintas.', 'success')
+    return redirect(url_for('admin_panel'))
 
 @app.route('/grafikai')
 @login_required
@@ -253,8 +299,6 @@ Jei neprašėte atstatyti slaptažodžio, ignoruokite šį laišką.
 '''
     mail.send(msg)
 
-# ... (ankstesnis kodas lieka nepakeistas) ...
-
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit(id):
@@ -306,8 +350,6 @@ def delete(id):
         db.session.rollback()
         flash(f'Klaida trinant įrašą: {str(e)}', 'danger')
     return redirect(url_for('index'))
-
-
 
 @app.template_filter('date_format')
 def date_format(value, format='%Y-%m-%d'):
