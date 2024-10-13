@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import json
 from itsdangerous import URLSafeTimedSerializer
 from flask_migrate import Migrate
+from flask import jsonify
 
 load_dotenv()
 
@@ -21,6 +22,7 @@ app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
 app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
 
 db = SQLAlchemy(app)
 mail = Mail(app)
@@ -41,6 +43,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(128), nullable=False)
     is_admin = db.Column(db.Boolean, default=False)
+    ride_results = db.relationship('RideResult', backref='user', lazy='dynamic')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -50,6 +53,7 @@ class User(db.Model):
 
 class RideResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     data = db.Column(db.Date, nullable=False)
     auto_nr = db.Column(db.String(20), nullable=False)
     tasku_kiekis = db.Column(db.Float, nullable=False)
@@ -73,26 +77,22 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        print("Admin required decorator called")
         if 'user_id' not in session:
-            print("No user_id in session")
             flash('Prašome prisijungti.', 'warning')
             return redirect(url_for('login', next=request.url))
         user = User.query.get(session['user_id'])
-        print(f"User: {user}, Is admin: {user.is_admin if user else None}")
         if not user or not user.is_admin:
-            print("User is not admin")
             flash('Tik administratorius gali pasiekti šį puslapį.', 'danger')
             return redirect(url_for('index'))
-        print("Admin access granted")
         return f(*args, **kwargs)
     return decorated_function
 
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
+    user_id = session['user_id']
     selected_month = request.args.get('month', date.today().strftime('%Y-%m'))
-    visi_irasai = RideResult.query.filter(RideResult.menesis == selected_month).all()
+    visi_irasai = RideResult.query.filter(RideResult.user_id == user_id, RideResult.menesis == selected_month).all()
 
     if request.method == 'POST':
         try:
@@ -119,7 +119,7 @@ def index():
 
             menesis = data.strftime('%Y-%m')
             naujas_irasas = RideResult(
-                data=data, auto_nr=auto_nr, tasku_kiekis=tasku_kiekis,
+                user_id=user_id, data=data, auto_nr=auto_nr, tasku_kiekis=tasku_kiekis,
                 km_kiekis=km_kiekis, pakrautos_paletes=pakrautos_paletes,
                 tara=tara, atgalines_paletes=atgalines_paletes,
                 eur_uz_reisa=eur_uz_reisa, menesis=menesis, savaitgalis=savaitgalis
@@ -183,15 +183,24 @@ def delete_user(user_id):
     if user.is_admin:
         flash('Negalima ištrinti administratoriaus paskyros.', 'danger')
     else:
-        db.session.delete(user)
-        db.session.commit()
-        flash(f'Vartotojas {user.username} sėkmingai ištrintas.', 'success')
+        try:
+            # Ištrinti visus vartotojo RideResult įrašus
+            RideResult.query.filter_by(user_id=user.id).delete()
+            
+            # Ištrinti patį vartotoją
+            db.session.delete(user)
+            db.session.commit()
+            flash(f'Vartotojas {user.username} ir visi jo įrašai sėkmingai ištrinti.', 'success')
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Klaida trinant vartotoją: {str(e)}', 'danger')
     return redirect(url_for('admin_panel'))
 
 @app.route('/grafikai')
 @login_required
 def grafikai():
-    visi_irasai = RideResult.query.all()
+    user_id = session['user_id']
+    visi_irasai = RideResult.query.filter_by(user_id=user_id).all()
     visi_irasai_json = json.dumps([{
         'id': irasas.id,
         'data': irasas.data.strftime('%Y-%m-%d'),
@@ -205,7 +214,6 @@ def grafikai():
         'savaitgalis': irasas.savaitgalis,
         'menesis': irasas.data.strftime('%Y-%m')
     } for irasas in visi_irasai])
-    print("Visi įrašai JSON:", visi_irasai_json)  # Pridėta debug eilutė
     return render_template('grafikai.html', visi_irasai=visi_irasai_json)
 
 @app.route('/register', methods=['GET', 'POST'])
@@ -234,15 +242,31 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if not username or not password:
+            flash('Prašome užpildyti visus laukus.', 'danger')
+            return render_template('login.html')
+        
         user = User.query.filter_by(username=username).first()
+        print(f"Bandoma prisijungti: vartotojo vardas={username}, rastas vartotojas={user}")
+        
+        if user:
+            password_correct = user.check_password(password)
+            print(f"Slaptažodžio tikrinimas: {password_correct}")
+            print(f"Vartotojo admin statusas: {user.is_admin}")
+        
         if user and user.check_password(password):
             session['user_id'] = user.id
             flash('Sėkmingai prisijungėte!', 'success')
-            return redirect(url_for('index'))
+            if user.is_admin:
+                return redirect(url_for('admin_panel'))
+            else:
+                return redirect(url_for('index'))
         else:
             flash('Neteisingas vartotojo vardas arba slaptažodis.', 'danger')
+    
     return render_template('login.html')
 
 @app.route('/logout')
@@ -289,20 +313,32 @@ def reset_password(token):
 
 def send_password_reset_email(user):
     token = s.dumps(user.email, salt='password-reset-salt')
-    msg = Message('Slaptažodžio Atstatymas',
-                  sender=app.config['MAIL_USERNAME'],
-                  recipients=[user.email])
-    msg.body = f'''Norėdami atstatyti slaptažodį, spauskite šią nuorodą:
-{url_for('reset_password', token=token, _external=True)}
+    reset_url = url_for('reset_password', token=token, _external=True)
+    subject = 'Slaptažodžio Atstatymas'
+    body = f'''
+    Norėdami atstatyti slaptažodį, spauskite šią nuorodą:
+    {reset_url}
 
-Jei neprašėte atstatyti slaptažodžio, ignoruokite šį laišką.
-'''
-    mail.send(msg)
+    Jei neprašėte atstatyti slaptažodžio, ignoruokite šį laišką.
+    '''
+    msg = Message(subject,
+                  sender=app.config['MAIL_USERNAME'],
+                  recipients=[user.email],
+                  body=body)
+    try:
+        mail.send(msg)
+    except Exception as e:
+        print(f"Klaida siunčiant el. laišką: {str(e)}")
+        raise
 
 @app.route('/edit/<int:id>', methods=['GET', 'POST'])
 @login_required
 def edit(id):
     irasas = RideResult.query.get_or_404(id)
+    if irasas.user_id != session['user_id']:
+        flash('Jūs neturite teisės redaguoti šio įrašo.', 'danger')
+        return redirect(url_for('index'))
+    
     if request.method == 'POST':
         try:
             irasas.data = datetime.strptime(request.form['data'], '%Y-%m-%d').date()
@@ -342,6 +378,10 @@ def edit(id):
 @login_required
 def delete(id):
     irasas = RideResult.query.get_or_404(id)
+    if irasas.user_id != session['user_id']:
+        flash('Jūs neturite teisės ištrinti šio įrašo.', 'danger')
+        return redirect(url_for('index'))
+    
     try:
         db.session.delete(irasas)
         db.session.commit()
@@ -365,7 +405,43 @@ def page_not_found(e):
 def internal_server_error(e):
     return render_template('500.html'), 500
 
+@app.route('/reset_admin', methods=['GET', 'POST'])
+def reset_admin():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        
+        admin = User.query.filter_by(is_admin=True).first()
+        if admin:
+            admin.username = username
+            admin.set_password(password)
+        else:
+            admin = User(username=username, email='admin@example.com', is_admin=True)
+            admin.set_password(password)
+            db.session.add(admin)
+        
+        db.session.commit()
+        flash('Administratoriaus paskyra atnaujinta arba sukurta!', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('reset_admin.html')
+
+def create_admin_if_not_exists():
+    with app.app_context():
+        admin = User.query.filter_by(is_admin=True).first()
+        if not admin:
+            new_admin = User(username='admin', email='admin@example.com', is_admin=True)
+            new_admin.set_password('admin123')  # Pakeiskite į saugesnį slaptažodį
+            db.session.add(new_admin)
+            db.session.commit()
+            print("Administratoriaus paskyra sukurta!")
+        else:
+            print("Administratoriaus paskyra jau egzistuoja.")
+
+
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+        create_admin_if_not_exists()
     app.run(debug=True)
