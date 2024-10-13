@@ -1,5 +1,5 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta
@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 import json
 from itsdangerous import URLSafeTimedSerializer
 from flask_migrate import Migrate
-from flask import jsonify
+import calendar
 
 load_dotenv()
 
@@ -34,7 +34,7 @@ CAR_NUMBERS = sorted(list(set([
     "FFH433", "FGB047", "GJM253", "GJM332", "GUN418", 
     "JEH745", "JEH746", "KTT023", "KTT029", "KUL631", 
     "KUL633", "KUL637", "KUM239", "KZL604", "LCS347", 
-    "LCS352", "LCS353", "LCS360"
+    "LCS352", "LCS353", "LCS360", "LCS358"
 ])))
 
 class User(db.Model):
@@ -96,42 +96,43 @@ def index():
 
     if request.method == 'POST':
         try:
-            data = datetime.strptime(request.form['data'], '%Y-%m-%d').date()
-            auto_nr = request.form['auto_nr']
-            tasku_kiekis = float(request.form['tasku_kiekis'])
-            km_kiekis = float(request.form['km_kiekis'])
-            pakrautos_paletes = float(request.form['pakrautos_paletes'])
-            tara = float(request.form['tara'])
-            atgalines_paletes = float(request.form['atgalines_paletes'])
-            savaitgalis = request.form.get('savaitgalis') == 'true'
-
+            data = request.json
+            data['data'] = datetime.strptime(data['data'], '%Y-%m-%d').date()
+            data['savaitgalis'] = data.get('savaitgalis', False)
+            
             eur_uz_reisa = (
-                km_kiekis * 0.1 +
-                tasku_kiekis * 1.7 +
-                pakrautos_paletes * 0.64 +
-                tara * 0.5 +
-                atgalines_paletes * 0.64
+                float(data['km_kiekis']) * 0.1 +
+                float(data['tasku_kiekis']) * 1.7 +
+                float(data['pakrautos_paletes']) * 0.64 +
+                float(data['tara']) * 0.5 +
+                float(data['atgalines_paletes']) * 0.64
             )
 
-            if savaitgalis:
-                eur_uz_reisa_be_taros = eur_uz_reisa - (tara * 0.5)
-                eur_uz_reisa = eur_uz_reisa_be_taros * 1.2 + (tara * 0.5)
+            if data['savaitgalis']:
+                eur_uz_reisa_be_taros = eur_uz_reisa - (float(data['tara']) * 0.5)
+                eur_uz_reisa = eur_uz_reisa_be_taros * 1.2 + (float(data['tara']) * 0.5)
 
-            menesis = data.strftime('%Y-%m')
+            menesis = data['data'].strftime('%Y-%m')
             naujas_irasas = RideResult(
-                user_id=user_id, data=data, auto_nr=auto_nr, tasku_kiekis=tasku_kiekis,
-                km_kiekis=km_kiekis, pakrautos_paletes=pakrautos_paletes,
-                tara=tara, atgalines_paletes=atgalines_paletes,
-                eur_uz_reisa=eur_uz_reisa, menesis=menesis, savaitgalis=savaitgalis
+                user_id=user_id, 
+                data=data['data'], 
+                auto_nr=data['auto_nr'], 
+                tasku_kiekis=float(data['tasku_kiekis']),
+                km_kiekis=float(data['km_kiekis']), 
+                pakrautos_paletes=float(data['pakrautos_paletes']),
+                tara=float(data['tara']), 
+                atgalines_paletes=float(data['atgalines_paletes']),
+                eur_uz_reisa=eur_uz_reisa, 
+                menesis=menesis, 
+                savaitgalis=data['savaitgalis']
             )
 
             db.session.add(naujas_irasas)
             db.session.commit()
-            flash('Įrašas sėkmingai pridėtas!', 'success')
+            return jsonify({"success": True, "message": "Įrašas sėkmingai pridėtas!"})
         except Exception as e:
             db.session.rollback()
-            flash(f'Klaida pridedant įrašą: {str(e)}', 'danger')
-        return redirect(url_for('index'))
+            return jsonify({"success": False, "message": f"Klaida pridedant įrašą: {str(e)}"})
 
     bendra_suma = {
         'tasku_kiekis': sum(irasas.tasku_kiekis for irasas in visi_irasai),
@@ -142,18 +143,18 @@ def index():
         'eur_uz_reisa': sum(irasas.eur_uz_reisa for irasas in visi_irasai)
     }
 
-    visi_irasai_json = json.dumps([{
+    visi_irasai_list = [{
         'id': irasas.id,
         'data': irasas.data.strftime('%Y-%m-%d'),
         'auto_nr': irasas.auto_nr,
-        'tasku_kiekis': irasas.tasku_kiekis,
-        'km_kiekis': irasas.km_kiekis,
-        'pakrautos_paletes': irasas.pakrautos_paletes,
-        'tara': irasas.tara,
-        'atgalines_paletes': irasas.atgalines_paletes,
-        'eur_uz_reisa': irasas.eur_uz_reisa,
+        'tasku_kiekis': float(irasas.tasku_kiekis),
+        'km_kiekis': float(irasas.km_kiekis),
+        'pakrautos_paletes': float(irasas.pakrautos_paletes),
+        'tara': float(irasas.tara),
+        'atgalines_paletes': float(irasas.atgalines_paletes),
+        'eur_uz_reisa': float(irasas.eur_uz_reisa),
         'savaitgalis': irasas.savaitgalis
-    } for irasas in visi_irasai])
+    } for irasas in visi_irasai]
 
     user = User.query.get(session['user_id'])
     user_info = {
@@ -163,12 +164,21 @@ def index():
         'is_admin': user.is_admin
     }
 
+    current_date = date.today()
+    available_months = []
+    for i in range(12):
+        month_date = current_date - timedelta(days=current_date.day - 1) - timedelta(days=30*i)
+        month_value = month_date.strftime('%Y-%m')
+        month_label = f"{calendar.month_name[month_date.month]} {month_date.year}"
+        available_months.append({'value': month_value, 'label': month_label})
+
     return render_template('index.html', 
-                           visi_irasai=visi_irasai_json, 
+                           visi_irasai=json.dumps(visi_irasai_list),
                            bendra_suma=json.dumps(bendra_suma), 
                            selected_month=selected_month,
                            car_numbers=json.dumps(CAR_NUMBERS),
-                           user=json.dumps(user_info))
+                           user=json.dumps(user_info),
+                           available_months=json.dumps(available_months))
 
 @app.route('/admin')
 @admin_required
@@ -184,10 +194,7 @@ def delete_user(user_id):
         flash('Negalima ištrinti administratoriaus paskyros.', 'danger')
     else:
         try:
-            # Ištrinti visus vartotojo RideResult įrašus
             RideResult.query.filter_by(user_id=user.id).delete()
-            
-            # Ištrinti patį vartotoją
             db.session.delete(user)
             db.session.commit()
             flash(f'Vartotojas {user.username} ir visi jo įrašai sėkmingai ištrinti.', 'success')
@@ -250,13 +257,6 @@ def login():
             return render_template('login.html')
         
         user = User.query.filter_by(username=username).first()
-        print(f"Bandoma prisijungti: vartotojo vardas={username}, rastas vartotojas={user}")
-        
-        if user:
-            password_correct = user.check_password(password)
-            print(f"Slaptažodžio tikrinimas: {password_correct}")
-            print(f"Vartotojo admin statusas: {user.is_admin}")
-        
         if user and user.check_password(password):
             session['user_id'] = user.id
             flash('Sėkmingai prisijungėte!', 'success')
@@ -379,17 +379,15 @@ def edit(id):
 def delete(id):
     irasas = RideResult.query.get_or_404(id)
     if irasas.user_id != session['user_id']:
-        flash('Jūs neturite teisės ištrinti šio įrašo.', 'danger')
-        return redirect(url_for('index'))
+        return jsonify({"success": False, "message": 'Jūs neturite teisės ištrinti šio įrašo.'})
     
     try:
         db.session.delete(irasas)
         db.session.commit()
-        flash('Įrašas sėkmingai ištrintas!', 'success')
+        return jsonify({"success": True, "message": 'Įrašas sėkmingai ištrintas!'})
     except Exception as e:
         db.session.rollback()
-        flash(f'Klaida trinant įrašą: {str(e)}', 'danger')
-    return redirect(url_for('index'))
+        return jsonify({"success": False, "message": f'Klaida trinant įrašą: {str(e)}'})
 
 @app.template_filter('date_format')
 def date_format(value, format='%Y-%m-%d'):
@@ -437,8 +435,6 @@ def create_admin_if_not_exists():
             print("Administratoriaus paskyra sukurta!")
         else:
             print("Administratoriaus paskyra jau egzistuoja.")
-
-
 
 if __name__ == '__main__':
     with app.app_context():
