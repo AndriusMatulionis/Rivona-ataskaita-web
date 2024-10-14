@@ -1,15 +1,15 @@
 import os
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date, timedelta
-from functools import wraps
 from flask_mail import Mail, Message
 from dotenv import load_dotenv
 import json
 from itsdangerous import URLSafeTimedSerializer
 from flask_migrate import Migrate
 import calendar
+from functools import wraps
+from datetime import date, datetime, timedelta
+from database import db, User, RideResult, Store
+from werkzeug.security import generate_password_hash, check_password_hash
 
 load_dotenv()
 
@@ -24,7 +24,7 @@ app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
 
-db = SQLAlchemy(app)
+db.init_app(app)
 mail = Mail(app)
 migrate = Migrate(app, db)
 s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
@@ -36,6 +36,14 @@ CAR_NUMBERS = sorted(list(set([
     "KUL633", "KUL637", "KUM239", "KZL604", "LCS347", 
     "LCS352", "LCS353", "LCS360", "LCS358"
 ])))
+
+# ... rest of your app.py code ...
+
+# ... rest of your app.py code ...
+
+
+
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -96,9 +104,18 @@ def index():
 
     if request.method == 'POST':
         try:
-            data = request.json
+            if request.is_json:
+                data = request.json
+            else:
+                data = request.form.to_dict()
+            
+            if not data:
+                return jsonify({"success": False, "message": "Nėra duomenų"})
+            
+            print("Gauti duomenys:", data)  # Pridėta debuginimui
+            
             data['data'] = datetime.strptime(data['data'], '%Y-%m-%d').date()
-            data['savaitgalis'] = data.get('savaitgalis', False)
+            data['savaitgalis'] = data.get('savaitgalis') == 'true'
             
             eur_uz_reisa = (
                 float(data['km_kiekis']) * 0.1 +
@@ -132,28 +149,31 @@ def index():
             return jsonify({"success": True, "message": "Įrašas sėkmingai pridėtas!"})
         except Exception as e:
             db.session.rollback()
+            print("Klaida:", str(e))  # Pridėta debuginimui
             return jsonify({"success": False, "message": f"Klaida pridedant įrašą: {str(e)}"})
 
+    # ... likęs kodas ...
+
     bendra_suma = {
-        'tasku_kiekis': sum(irasas.tasku_kiekis for irasas in visi_irasai),
-        'km_kiekis': sum(irasas.km_kiekis for irasas in visi_irasai),
-        'pakrautos_paletes': sum(irasas.pakrautos_paletes for irasas in visi_irasai),
-        'tara': sum(irasas.tara for irasas in visi_irasai),
-        'atgalines_paletes': sum(irasas.atgalines_paletes for irasas in visi_irasai),
-        'eur_uz_reisa': sum(irasas.eur_uz_reisa for irasas in visi_irasai)
+        'tasku_kiekis': sum(irasas.tasku_kiekis or 0 for irasas in visi_irasai),
+        'km_kiekis': sum(irasas.km_kiekis or 0 for irasas in visi_irasai),
+        'pakrautos_paletes': sum(irasas.pakrautos_paletes or 0 for irasas in visi_irasai),
+        'tara': sum(irasas.tara or 0 for irasas in visi_irasai),
+        'atgalines_paletes': sum(irasas.atgalines_paletes or 0 for irasas in visi_irasai),
+        'eur_uz_reisa': sum(irasas.eur_uz_reisa or 0 for irasas in visi_irasai)
     }
 
     visi_irasai_list = [{
         'id': irasas.id,
         'data': irasas.data.strftime('%Y-%m-%d'),
         'auto_nr': irasas.auto_nr,
-        'tasku_kiekis': float(irasas.tasku_kiekis),
-        'km_kiekis': float(irasas.km_kiekis),
-        'pakrautos_paletes': float(irasas.pakrautos_paletes),
-        'tara': float(irasas.tara),
-        'atgalines_paletes': float(irasas.atgalines_paletes),
-        'eur_uz_reisa': float(irasas.eur_uz_reisa),
-        'savaitgalis': irasas.savaitgalis
+        'tasku_kiekis': float(irasas.tasku_kiekis or 0),
+        'km_kiekis': float(irasas.km_kiekis or 0),
+        'pakrautos_paletes': float(irasas.pakrautos_paletes or 0),
+        'tara': float(irasas.tara or 0),
+        'atgalines_paletes': float(irasas.atgalines_paletes or 0),
+        'eur_uz_reisa': float(irasas.eur_uz_reisa or 0),
+        'savaitgalis': bool(irasas.savaitgalis)
     } for irasas in visi_irasai]
 
     user = User.query.get(session['user_id'])
