@@ -1,6 +1,7 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from flask_mail import Mail, Message
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 from dotenv import load_dotenv
 import json
 from itsdangerous import URLSafeTimedSerializer
@@ -8,8 +9,9 @@ from flask_migrate import Migrate
 import calendar
 from functools import wraps
 from datetime import date, datetime, timedelta
-from database import db, User, RideResult, Store
 from werkzeug.security import generate_password_hash, check_password_hash
+from store_routes import store_bp
+from models import db, User, RideResult, Store, init_app
 
 load_dotenv()
 
@@ -24,10 +26,15 @@ app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
 
-db.init_app(app)
+init_app(app)
 mail = Mail(app)
 migrate = Migrate(app, db)
 s = URLSafeTimedSerializer(app.config['SECRET_KEY'])
+
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+
+app.register_blueprint(store_bp)
 
 # Unique and sorted list of car numbers
 CAR_NUMBERS = sorted(list(set([
@@ -37,59 +44,15 @@ CAR_NUMBERS = sorted(list(set([
     "LCS352", "LCS353", "LCS360", "LCS358"
 ])))
 
-# ... rest of your app.py code ...
-
-# ... rest of your app.py code ...
-
-
-
-
-
-class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)
-    ride_results = db.relationship('RideResult', backref='user', lazy='dynamic')
-
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-
-    def check_password(self, password):
-        return check_password_hash(self.password_hash, password)
-
-class RideResult(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    data = db.Column(db.Date, nullable=False)
-    auto_nr = db.Column(db.String(20), nullable=False)
-    tasku_kiekis = db.Column(db.Float, nullable=False)
-    km_kiekis = db.Column(db.Float, nullable=False)
-    pakrautos_paletes = db.Column(db.Float, nullable=False)
-    tara = db.Column(db.Float, nullable=False)
-    atgalines_paletes = db.Column(db.Float, nullable=False)
-    eur_uz_reisa = db.Column(db.Float, nullable=False)
-    menesis = db.Column(db.String(7), nullable=False)
-    savaitgalis = db.Column(db.Boolean, default=False)
-
-def login_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Prašome prisijungti.', 'warning')
-            return redirect(url_for('login', next=request.url))
-        return f(*args, **kwargs)
-    return decorated_function
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
 
 def admin_required(f):
     @wraps(f)
+    @login_required
     def decorated_function(*args, **kwargs):
-        if 'user_id' not in session:
-            flash('Prašome prisijungti.', 'warning')
-            return redirect(url_for('login', next=request.url))
-        user = User.query.get(session['user_id'])
-        if not user or not user.is_admin:
+        if not current_user.is_admin:
             flash('Tik administratorius gali pasiekti šį puslapį.', 'danger')
             return redirect(url_for('index'))
         return f(*args, **kwargs)
@@ -98,7 +61,7 @@ def admin_required(f):
 @app.route('/', methods=['GET', 'POST'])
 @login_required
 def index():
-    user_id = session['user_id']
+    user_id = current_user.id
     selected_month = request.args.get('month', date.today().strftime('%Y-%m'))
     visi_irasai = RideResult.query.filter(RideResult.user_id == user_id, RideResult.menesis == selected_month).all()
 
@@ -146,13 +109,41 @@ def index():
 
             db.session.add(naujas_irasas)
             db.session.commit()
-            return jsonify({"success": True, "message": "Įrašas sėkmingai pridėtas!"})
+
+            # Konvertuojame naują įrašą į žodyną
+            new_record = {
+                'id': naujas_irasas.id,
+                'data': naujas_irasas.data.strftime('%Y-%m-%d'),
+                'auto_nr': naujas_irasas.auto_nr,
+                'tasku_kiekis': float(naujas_irasas.tasku_kiekis),
+                'km_kiekis': float(naujas_irasas.km_kiekis),
+                'pakrautos_paletes': float(naujas_irasas.pakrautos_paletes),
+                'tara': float(naujas_irasas.tara),
+                'atgalines_paletes': float(naujas_irasas.atgalines_paletes),
+                'eur_uz_reisa': float(naujas_irasas.eur_uz_reisa),
+                'savaitgalis': naujas_irasas.savaitgalis
+            }
+
+            # Atnaujinamas bendros sumos skaičiavimas
+            bendra_suma = {
+                'tasku_kiekis': sum(irasas.tasku_kiekis or 0 for irasas in visi_irasai) + float(data['tasku_kiekis']),
+                'km_kiekis': sum(irasas.km_kiekis or 0 for irasas in visi_irasai) + float(data['km_kiekis']),
+                'pakrautos_paletes': sum(irasas.pakrautos_paletes or 0 for irasas in visi_irasai) + float(data['pakrautos_paletes']),
+                'tara': sum(irasas.tara or 0 for irasas in visi_irasai) + float(data['tara']),
+                'atgalines_paletes': sum(irasas.atgalines_paletes or 0 for irasas in visi_irasai) + float(data['atgalines_paletes']),
+                'eur_uz_reisa': sum(irasas.eur_uz_reisa or 0 for irasas in visi_irasai) + eur_uz_reisa
+            }
+
+            return jsonify({
+                "success": True,
+                "message": "Įrašas sėkmingai pridėtas!",
+                "newRecord": new_record,
+                "newTotal": bendra_suma
+            })
         except Exception as e:
             db.session.rollback()
             print("Klaida:", str(e))  # Pridėta debuginimui
             return jsonify({"success": False, "message": f"Klaida pridedant įrašą: {str(e)}"})
-
-    # ... likęs kodas ...
 
     bendra_suma = {
         'tasku_kiekis': sum(irasas.tasku_kiekis or 0 for irasas in visi_irasai),
@@ -176,12 +167,11 @@ def index():
         'savaitgalis': bool(irasas.savaitgalis)
     } for irasas in visi_irasai]
 
-    user = User.query.get(session['user_id'])
     user_info = {
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'is_admin': user.is_admin
+        'id': current_user.id,
+        'username': current_user.username,
+        'email': current_user.email,
+        'is_admin': current_user.is_admin
     }
 
     current_date = date.today()
@@ -226,7 +216,7 @@ def delete_user(user_id):
 @app.route('/grafikai')
 @login_required
 def grafikai():
-    user_id = session['user_id']
+    user_id = current_user.id
     visi_irasai = RideResult.query.filter_by(user_id=user_id).all()
     visi_irasai_json = json.dumps([{
         'id': irasas.id,
@@ -278,7 +268,7 @@ def login():
         
         user = User.query.filter_by(username=username).first()
         if user and user.check_password(password):
-            session['user_id'] = user.id
+            login_user(user)
             flash('Sėkmingai prisijungėte!', 'success')
             if user.is_admin:
                 return redirect(url_for('admin_panel'))
@@ -292,7 +282,7 @@ def login():
 @app.route('/logout')
 @login_required
 def logout():
-    session.pop('user_id', None)
+    logout_user()
     flash('Sėkmingai atsijungėte!', 'success')
     return redirect(url_for('login'))
 
@@ -355,7 +345,7 @@ def send_password_reset_email(user):
 @login_required
 def edit(id):
     irasas = RideResult.query.get_or_404(id)
-    if irasas.user_id != session['user_id']:
+    if irasas.user_id != current_user.id:
         flash('Jūs neturite teisės redaguoti šio įrašo.', 'danger')
         return redirect(url_for('index'))
     
@@ -398,13 +388,40 @@ def edit(id):
 @login_required
 def delete(id):
     irasas = RideResult.query.get_or_404(id)
-    if irasas.user_id != session['user_id']:
+    if irasas.user_id != current_user.id:
         return jsonify({"success": False, "message": 'Jūs neturite teisės ištrinti šio įrašo.'})
     
     try:
+        # Išsaugome įrašo duomenis prieš jį ištrindami
+        deleted_record = {
+            'tasku_kiekis': irasas.tasku_kiekis,
+            'km_kiekis': irasas.km_kiekis,
+            'pakrautos_paletes': irasas.pakrautos_paletes,
+            'tara': irasas.tara,
+            'atgalines_paletes': irasas.atgalines_paletes,
+            'eur_uz_reisa': irasas.eur_uz_reisa
+        }
+        
         db.session.delete(irasas)
         db.session.commit()
-        return jsonify({"success": True, "message": 'Įrašas sėkmingai ištrintas!'})
+        
+        # Apskaičiuojame naują bendrą sumą
+        visi_irasai = RideResult.query.filter_by(user_id=current_user.id).all()
+        new_total = {
+            'tasku_kiekis': sum(irasas.tasku_kiekis or 0 for irasas in visi_irasai),
+            'km_kiekis': sum(irasas.km_kiekis or 0 for irasas in visi_irasai),
+            'pakrautos_paletes': sum(irasas.pakrautos_paletes or 0 for irasas in visi_irasai),
+            'tara': sum(irasas.tara or 0 for irasas in visi_irasai),
+            'atgalines_paletes': sum(irasas.atgalines_paletes or 0 for irasas in visi_irasai),
+            'eur_uz_reisa': sum(irasas.eur_uz_reisa or 0 for irasas in visi_irasai)
+        }
+        
+        return jsonify({
+            "success": True, 
+            "message": 'Įrašas sėkmingai ištrintas!',
+            "deletedRecord": deleted_record,
+            "newTotal": new_total
+        })
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": f'Klaida trinant įrašą: {str(e)}'})

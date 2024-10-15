@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="lt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redaguoti parduotuvę</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Redaguoti parduotuvę</h1>
+        <form method="POST">
+            <div class="form-group">
+                <label for="pavadinimas">Pavadinimas:</label>
+                <input type="text" class="form-control" id="pavadinimas" name="pavadinimas" value="{{ store.pavadinimas }}" required>
+            </div>
+            <div class="form-group">
+                <label for="adresas">Adresas:</label>
+                <input type="text" class="form-control" id="adresas" name="adresas" value="{{ store.adresas }}" required>
+            </div>
+            <div class="form-group">
+                <label for="apskritis">Koordinatės:</label>
+                <input type="text" class="form-control" id="apskritis" name="apskritis" value="{{ store.apskritis }}" required>
+            </div>
+            <div class="form-group">
+                <label for="darbo_laikas">Darbo laikas:</label>
+                <input type="text" class="form-control" id="darbo_laikas" name="darbo_laikas" value="{{ store.darbo_laikas }}">
+            </div>
+            <div class="form-group">
+                <label for="darbuotoju_darbo_laikas">Darbuotojų darbo laikas:</label>
+                <input type="text" class="form-control" id="darbuotoju_darbo_laikas" name="darbuotoju_darbo_laikas" value="{{ store.darbuotoju_darbo_laikas }}">
+            </div>
+            <div class="form-group">
+                <label for="sestadienio_darbo_laikas">Šeštadienio darbo laikas:</label>
+                <input type="text" class="form-control" id="sestadienio_darbo_laikas" name="sestadienio_darbo_laikas" value="{{ store.sestadienio_darbo_laikas }}">
+            </div>
+            <div class="form-group">
+                <label for="sekmadienio_darbo_laikas">Sekmadienio darbo laikas:</label>
+                <input type="text" class="form-control" id="sekmadienio_darbo_laikas" name="sekmadienio_darbo_laikas" value

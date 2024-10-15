@@ -1,0 +1,42 @@
+# Atnaujintas aplankomų parduotuvių katalogo įgyvendinimo planas
+
+1. //Duomenų bazės modelio sukūrimas:
+   - Sukurti naują modelį `Store` su laukais: id, pavadinimas, adresas, apskritis, darbo_laikas, darbuotoju_darbo_laikas, sestadienio_darbo_laikas, sekmadienio_darbo_laikas, google_maps_nuoroda
+
+2.// Naujo puslapio sukūrimas:
+   - Sukurti naują `store_catalog.html` šabloną
+   - Įdėti mygtuką `index.html` faile, kuris nukreiptų į parduotuvių katalogą
+
+3.// Maršrutų sukūrimas:
+   - Sukurti naują Python failą `store_routes.py`
+   - Sukurti maršrutą, kuris atvaizduotų parduotuvių katalogą
+   - Susieti šį maršrutą su `app.py`
+
+4.// Paieškos funkcijos įgyvendinimas:
+   - Sukurti paieškos formą `store_catalog.html` šablone
+   - Įgyvendinti paieškos logiką `store_routes.py` faile
+
+5.// Parduotuvių sąrašo atvaizdavimas:
+   - Sugrupuoti parduotuves pagal apskritis
+   - Sunumeruoti parduotuves
+   - Atvaizduoti visą reikalingą informaciją lentelės forma
+
+6.// Administratoriaus funkcijų sukūrimas:
+   - Sukurti naują `store_admin.html` šabloną
+   - Sukurti formas parduotuvių pridėjimui, redagavimui ir trynimui
+   - Sukurti atitinkamus maršrutus `store_routes.py` faile
+   - Įtraukti apskrities pasirinkimo lauką formoje
+
+7.// Saugumo užtikrinimas:
+   - Įsitikinti, kad tik administratoriai gali pasiekti parduotuvių valdymo funkcijas
+
+8.// Testavimas:
+   - Išbandyti visas naujas funkcijas
+   - Patikrinti, ar tinkamai veikia paieška ir filtravimas
+
+9. Dokumentacija:
+   - Atnaujinti projekto dokumentaciją su naujomis funkcijomis
+
+10. Diegimas:
+    - Atnaujinti duomenų bazę su naujais modeliais
+    - Įdiegti naują funkcionalumą į produkcinę aplinką

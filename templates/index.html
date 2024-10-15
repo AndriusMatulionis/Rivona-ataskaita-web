@@ -7,10 +7,10 @@
     <title>Reisų Rezultatai</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         .weekend-button {
             background-color: transparent;
@@ -28,6 +28,45 @@
             padding: 5px;
             background-color: #f8f9fa;
             border-radius: 5px;
+        }
+        @media (max-width: 768px) {
+            body {
+                font-size: 16px;
+            }
+            .table-responsive-stack .table-responsive-stack-thead {
+                display: none;
+            }
+            .table-responsive-stack tr {
+                display: block;
+                border: 1px solid #ccc;
+                margin-bottom: 1em;
+                border-radius: 4px;
+                font-size: 1.1em;
+            }
+            .table-responsive-stack td {
+                display: block;
+                text-align: right;
+                padding-left: 50%;
+                position: relative;
+            }
+            .table-responsive-stack td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 6px;
+                width: 45%;
+                text-align: left;
+                font-weight: bold;
+            }
+            .table-container {
+                max-width: 100%;
+                overflow-x: auto;
+            }
+        }
+        .sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            background-color: white;
         }
     </style>
 </head>
@@ -63,7 +102,9 @@
         }
 
         function App() {
-            const [visiIrasai, setVisiIrasai] = React.useState(JSON.parse('{{ visi_irasai | safe }}'));
+            const [visiIrasai, setVisiIrasai] = React.useState(
+                JSON.parse('{{ visi_irasai | safe }}').sort((a, b) => new Date(b.data) - new Date(a.data))
+            );
             const [bendraSuma, setBendraSuma] = React.useState(JSON.parse('{{ bendra_suma | safe }}'));
             const [selectedMonth, setSelectedMonth] = React.useState('{{ selected_month }}');
             const [isSavaitgalis, setIsSavaitgalis] = React.useState(false);
@@ -92,22 +133,63 @@
                 
                 $.ajax({
                     type: 'POST',
-                    url: '/',
+                    url: '{{ url_for("index") }}',
                     data: formData,
                     processData: false,
                     contentType: false,
                     success: function(response) {
                         if (response.success) {
+                            // Pridėti naują įrašą į sąrašo pradžią
+                            setVisiIrasai(prevIrasai => [response.newRecord, ...prevIrasai]);
+                            // Atnaujinti bendrą sumą
+                            setBendraSuma(prevSuma => ({
+                                tasku_kiekis: prevSuma.tasku_kiekis + response.newRecord.tasku_kiekis,
+                                km_kiekis: prevSuma.km_kiekis + response.newRecord.km_kiekis,
+                                pakrautos_paletes: prevSuma.pakrautos_paletes + response.newRecord.pakrautos_paletes,
+                                tara: prevSuma.tara + response.newRecord.tara,
+                                atgalines_paletes: prevSuma.atgalines_paletes + response.newRecord.atgalines_paletes,
+                                eur_uz_reisa: prevSuma.eur_uz_reisa + response.newRecord.eur_uz_reisa
+                            }));
+                            // Išvalyti formos laukus
+                            form.reset();
+                            setIsSavaitgalis(false);
                             alert(response.message);
-                            window.location.reload();
                         } else {
                             alert('Klaida: ' + response.message);
                         }
                     },
-                    error: function() {
+                    error: function(jqXHR, textStatus, errorThrown) {
+                        console.error("AJAX klaida:", textStatus, errorThrown);
                         alert('Įvyko klaida. Bandykite dar kartą.');
                     }
                 });
+            };
+
+            const handleDelete = (id) => {
+                if (confirm('Ar tikrai norite ištrinti šį įrašą?')) {
+                    $.ajax({
+                        url: '/delete/' + id,
+                        type: 'GET',
+                        dataType: 'json',
+                        success: function(response) {
+                            if (response.success) {
+                                // Pašaliname įrašą iš sąrašo
+                                setVisiIrasai(prevIrasai => prevIrasai.filter(irasas => irasas.id !== id));
+                                
+                                // Atnaujiname bendrą sumą
+                                setBendraSuma(response.newTotal);
+                                
+                                alert(response.message);
+                            } else {
+                                alert('Klaida: ' + response.message);
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Klaida:', error);
+                            alert('Įvyko klaida bandant ištrinti įrašą.');
+                        }
+                    });
+                }
             };
 
             return (
@@ -118,6 +200,7 @@
                     <div className="mb-3">
                         <a href="/logout" className="btn btn-danger mr-2">Atsijungti</a>
                         <a href="/grafikai" className="btn btn-info mr-2">Peržiūrėti grafikus</a>
+                        <a href="/store_catalog" className="btn btn-success mr-2">Parduotuvių ir atgalinių katalogas</a>
                         {user.is_admin && (
                             <a href="/admin" className="btn btn-warning">Administratoriaus skydelis</a>
                         )}
@@ -193,64 +276,72 @@
                         <button type="submit" className="btn btn-success">Pridėti įrašą</button>
                     </form>
 
-                    <h2>Įrašų sąrašas</h2>
-                    <table className="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Auto Nr.</th>
-                                <th>Taškai</th>
-                                <th>KM</th>
-                                <th>Paletės</th>
-                                <th>Tara</th>
-                                <th>Atg. paletės</th>
-                                <th>EUR</th>
-                                <th>Savaitgalis</th>
-                                <th>Veiksmai</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {visiIrasai.map(irasas => (
-                                <tr key={irasas.id}>
-                                    <td>{irasas.data}</td>
-                                    <td>{irasas.auto_nr}</td>
-                                    <td>{irasas.tasku_kiekis.toFixed(2)}</td>
-                                    <td>{irasas.km_kiekis.toFixed(2)}</td>
-                                    <td>{irasas.pakrautos_paletes.toFixed(2)}</td>
-                                    <td>{irasas.tara.toFixed(2)}</td>
-                                    <td>{irasas.atgalines_paletes.toFixed(2)}</td>
-                                    <td>{irasas.eur_uz_reisa.toFixed(2)}</td>
-                                    <td>{irasas.savaitgalis ? 'Taip' : 'Ne'}</td>
-                                    <td>
-                                        <a href={`/edit/${irasas.id}`} className="btn btn-sm btn-warning mr-2">Redaguoti</a>
-                                        <a href={`/delete/${irasas.id}`} className="btn btn-sm btn-danger" onClick={(e) => { if(!confirm('Ar tikrai norite ištrinti šį įrašą?')) e.preventDefault(); }}>Ištrinti</a>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                    <div className="mb-4">
+                        <h2>Bendra suma</h2>
+                        <div className="table-container">
+                            <table className="table table-bordered table-responsive-stack">
+                                <thead className="table-responsive-stack-thead">
+                                    <tr>
+                                        <th>Taškų kiekis</th>
+                                        <th>Kilometrų kiekis</th>
+                                        <th>Pakrautos paletės</th>
+                                        <th>Tara</th>
+                                        <th>Atgalinės paletės</th>
+                                        <th>EUR už reisą</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td data-label="Taškų kiekis">{bendraSuma.tasku_kiekis.toFixed(2)}</td>
+                                        <td data-label="Kilometrų kiekis">{bendraSuma.km_kiekis.toFixed(2)}</td>
+                                        <td data-label="Pakrautos paletės">{bendraSuma.pakrautos_paletes.toFixed(2)}</td>
+                                        <td data-label="Tara">{bendraSuma.tara.toFixed(2)}</td>
+                                        <td data-label="Atgalinės paletės">{bendraSuma.atgalines_paletes.toFixed(2)}</td>
+                                        <td data-label="EUR už reisą">{bendraSuma.eur_uz_reisa.toFixed(2)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
 
-                    <h2>Bendra suma</h2>
-                    <table className="table table-bordered">
-                        <tbody>
-                            <tr>
-                                <th>Taškų kiekis</th>
-                                <th>Kilometrų kiekis</th>
-                                <th>Pakrautos paletės</th>
-                                <th>Tara</th>
-                                <th>Atgalinės paletės</th>
-                                <th>EUR už reisą</th>
-                            </tr>
-                            <tr>
-                                <td>{bendraSuma.tasku_kiekis.toFixed(2)}</td>
-                                <td>{bendraSuma.km_kiekis.toFixed(2)}</td>
-                                <td>{bendraSuma.pakrautos_paletes.toFixed(2)}</td>
-                                <td>{bendraSuma.tara.toFixed(2)}</td>
-                                <td>{bendraSuma.atgalines_paletes.toFixed(2)}</td>
-                                <td>{bendraSuma.eur_uz_reisa.toFixed(2)}</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <h2>Įrašų sąrašas</h2>
+                    <div className="table-container">
+                        <table className="table table-striped table-responsive-stack">
+                            <thead className="table-responsive-stack-thead">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Auto Nr.</th>
+                                    <th>Taškai</th>
+                                    <th>KM</th>
+                                    <th>Paletės</th>
+                                    <th>Tara</th>
+                                    <th>Atg. paletės</th>
+                                    <th>EUR</th>
+                                    <th>Savaitgalis</th>
+                                    <th>Veiksmai</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {visiIrasai.map(irasas => (
+                                    <tr key={irasas.id} id={`row-${irasas.id}`}>
+                                        <td data-label="Data">{irasas.data}</td>
+                                        <td data-label="Auto Nr.">{irasas.auto_nr}</td>
+                                        <td data-label="Taškai">{irasas.tasku_kiekis.toFixed(2)}</td>
+                                        <td data-label="KM">{irasas.km_kiekis.toFixed(2)}</td>
+                                        <td data-label="Paletės">{irasas.pakrautos_paletes.toFixed(2)}</td>
+                                        <td data-label="Tara">{irasas.tara.toFixed(2)}</td>
+                                        <td data-label="Atg. paletės">{irasas.atgalines_paletes.toFixed(2)}</td>
+                                        <td data-label="EUR">{irasas.eur_uz_reisa.toFixed(2)}</td>
+                                        <td data-label="Savaitgalis">{irasas.savaitgalis ? 'Taip' : 'Ne'}</td>
+                                        <td data-label="Veiksmai">
+                                            <a href={`/edit/${irasas.id}`} className="btn btn-sm btn-warning mr-2">Redaguoti</a>
+                                            <button onClick={() => handleDelete(irasas.id)} className="btn btn-sm btn-danger">Ištrinti</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             );
         }
