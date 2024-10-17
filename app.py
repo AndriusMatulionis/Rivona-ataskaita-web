@@ -12,12 +12,14 @@ from datetime import date, datetime, timedelta
 from werkzeug.security import generate_password_hash, check_password_hash
 from store_routes import store_bp
 from models import db, User, RideResult, Store, init_app
+from sqlalchemy import inspect
 
 load_dotenv()
 
 app = Flask(__name__)
+basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or 'xopwim-2xugpe-vEgsaz'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///duomenu_baze.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'duomenu_baze.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['MAIL_SERVER'] = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
 app.config['MAIL_PORT'] = int(os.environ.get('MAIL_PORT', 587))
@@ -25,6 +27,7 @@ app.config['MAIL_USE_TLS'] = True
 app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME')
 app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD')
 app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER')
+app.config['SESSION_TYPE'] = 'filesystem'
 
 init_app(app)
 mail = Mail(app)
@@ -64,7 +67,8 @@ def index():
     user_id = current_user.id
     selected_month = request.args.get('month', date.today().strftime('%Y-%m'))
     visi_irasai = RideResult.query.filter(RideResult.user_id == user_id, RideResult.menesis == selected_month).all()
-
+    print(f"Index: Vartotojas prisijungęs: {current_user.is_authenticated}")
+    
     if request.method == 'POST':
         try:
             if request.is_json:
@@ -240,43 +244,60 @@ def register():
         email = request.form['email']
         password = request.form['password']
         
+        # Patikrinkite, ar vartotojo vardas jau egzistuoja
         if User.query.filter_by(username=username).first():
             flash('Vartotojo vardas jau užimtas.', 'danger')
             return redirect(url_for('register'))
         
+        # Patikrinkite, ar el. paštas jau užregistruotas
         if User.query.filter_by(email=email).first():
             flash('El. paštas jau užregistruotas.', 'danger')
             return redirect(url_for('register'))
         
+        # Sukurkite naują vartotoją
         new_user = User(username=username, email=email)
         new_user.set_password(password)
+        
+        # Išsaugokite naują vartotoją duomenų bazėje
         db.session.add(new_user)
         db.session.commit()
+        
+        
+        
         flash('Registracija sėkminga! Galite prisijungti.', 'success')
         return redirect(url_for('login'))
+    
+    # Jei tai GET užklausa, tiesiog parodykite registracijos formą
     return render_template('register.html')
+    
+
+@app.before_request
+def before_request():
+    print("Duomenų bazės sesija:", db.session)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
-        
-        if not username or not password:
-            flash('Prašome užpildyti visus laukus.', 'danger')
-            return render_template('login.html')
+        print(f"Bandoma prisijungti su vartotoju: {username}")
         
         user = User.query.filter_by(username=username).first()
-        if user and user.check_password(password):
-            login_user(user)
-            flash('Sėkmingai prisijungėte!', 'success')
-            if user.is_admin:
-                return redirect(url_for('admin_panel'))
-            else:
+        if user:
+            print(f"Vartotojas rastas: {user.username}")
+            print(f"Vartotojo tipas: {'Administratorius' if user.is_admin else 'Paprastas vartotojas'}")
+            print(f"Slaptažodžio hash: {user.password_hash[:20]}...")
+            if user.check_password(password):
+                print("Slaptažodis teisingas")
+                login_user(user)
+                print(f"Vartotojas prisijungęs: {current_user.is_authenticated}")
                 return redirect(url_for('index'))
+            else:
+                print("Neteisingas slaptažodis")
         else:
-            flash('Neteisingas vartotojo vardas arba slaptažodis.', 'danger')
-    
+            print("Vartotojas nerastas")
+        
+        flash('Neteisingas vartotojo vardas arba slaptažodis.', 'danger')
     return render_template('login.html')
 
 @app.route('/logout')
@@ -472,6 +493,13 @@ def create_admin_if_not_exists():
             print("Administratoriaus paskyra sukurta!")
         else:
             print("Administratoriaus paskyra jau egzistuoja.")
+            
+            
+with app.app_context():
+    inspector = inspect(db.engine)
+    print("Lentelės duomenų bazėje:", inspector.get_table_names())
+    users = User.query.all()
+    print("Vartotojai duomenų bazėje:", [u.username for u in users])            
 
 if __name__ == '__main__':
     with app.app_context():
